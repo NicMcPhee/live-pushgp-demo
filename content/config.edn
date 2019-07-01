@@ -1,7 +1,7 @@
-{:site-title           "My Awesome Blog"
- :author               "Bob Bobbert"
- :description          "This blog is awesome"
- :site-url             "http://blogawesome.com/"
+{:site-title           "Live PushGP demo"
+ :author               "Nic McPhee"
+ :description          "An interactive PushGP demo in the browser"
+ :site-url             "https://github.com/NicMcPhee/live-pushgp-demo"
  :post-root            "posts"
  :page-root            "pages"
  :post-root-uri        "posts-output"
@@ -30,5 +30,8 @@
  :clean-urls           :trailing-slash
  :collapse-subdirs?    false
  :hide-future-posts?   true
- :klipse               {}
+ :klipse               {:settings {:selector ".klipse-cljs"
+                                   :selector-reagent ".klipse-reagent"
+                                   :codemirror-options-in {:line-numbers true}
+                                   :codemirror-options-out {:line-numbers true}}}
  :debug?               false}
