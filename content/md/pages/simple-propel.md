@@ -1,8 +1,7 @@
 {:title "Interactive PushGP demo"
  :layout :page
  :page-index 1
- :klipse true
- :home? true}
+ :klipse true}
 
 ## An interactive PushGP demo
 
