@@ -10,8 +10,12 @@
 
 ```klipse-cljs
 (ns propel.core
+  (:require-macros
+    [cljs.core.async.macros :refer [go go-loop]])
   (:require
-    [clojure.string :as string]))
+    [clojure.string :as string]
+    [cljs.core.async :as async]
+    [reagent.core :as r]))
 
 ;; CLI defaults:
 ;; - :instructions default-instructions
@@ -555,6 +559,11 @@
   [popsize instructions max-size]
   (repeatedly popsize #(random-individual instructions max-size)))
 
+; TODO: Add *short* sleep here so that we can potentially pause, etc.,
+; in the middle of evaluating a (possibly) large population. That probably
+; requires going from the very nice `map` solution to a `loop-recur` approach,
+; though, which is a bummer.
+
 (defn score-sorted-population
   "Given a population and an error function, score the individuals
    (writing their scores and behaviors to them in the process) and
@@ -568,12 +577,15 @@
 
 ### Persistence
 
-```klipse-cljs
+These are "standard" Clojure atoms used to persist state across a run.
 
+```klipse-cljs
 (def population-atom (atom [])) ;; stores population between steps
 (def args-atom (atom {})) ;; stores arg hash
 (def pause-atom (atom false)) ;; intended to be overridden externally
 (def counter-atom (atom 0)) ;; to manage generation limits on runs
+
+(def pushgp-results-atom (r/atom "<results will appear here>"))
 ```
 
 ### Reporting
@@ -586,20 +598,27 @@
   (into (sorted-map) (zipmap (:args problem) (:behaviors individual))))
 
 (defn report-generation
-  "Reports information each generation."
+  "Generates a summary report for a given generation."
   [pop generation]
-  (let [best (first pop)]
-    (println "-------------------------------------------------------")
-    (println "               Report for Generation" generation)
-    (println "-------------------------------------------------------")
-    (print "Best plushy: ") (prn (:plushy best))
-    (print "Best program: ") (prn (push-from-plushy (:plushy best)))
-    (println "Best total error:" (:total-error best))
-    (println "Best errors:" (:errors best))
-    (println "Behavior of best:"
-      (behavior-map (:training-function @args-atom) best))
-    (println)
-    ))
+  (let [best (first pop)
+        generation-report
+          (str
+            "\n-------------------------------------------------------\n"
+            "               Report for Generation " generation "\n"
+            "-------------------------------------------------------\n"
+            "Best plushy: " (prn-str (:plushy best))
+            "Best program: " (prn-str (push-from-plushy (:plushy best)))
+            "Best total error: " (:total-error best) "\n"
+            "Best errors: " (:errors best) "\n"
+            "Behavior of best:\n"
+            (behavior-map (:training-function @args-atom) best)
+            "\n")]
+      (swap! pushgp-results-atom str generation-report))
+  (go
+    ; We need this timeout so the computational side of the
+    ; system will sleep for a little, giving the UI side a
+    ; little access to the CPU to process user input.
+    (async/<! (async/timeout 100))))
 
 (defn report-starting-line
   [args] (println "Starting GP with args:" args))
@@ -925,6 +944,73 @@ We almost certainly want to hide this.
               counter-atom))
 
 (setup-and-run-propel! ":population-size" "10" ":max-generations" "20")
+```
+
+```klipse-reagent
+(def system-state (r/atom {}))
+
+(defn initialize-state []
+  (let [
+        ;fib-input (async/chan)
+        ;fib-control (async/chan)
+        ;fib-output (async/map
+        ;              (fn [n] {:input n, :result (fib n)})
+        ;              [(controllable-channel fib-control fib-input)])
+                      ]
+    (reset! system-state {
+      ;:fib-input fib-input
+      ;:fib-control fib-control
+      ;:fib-output fib-output
+      :events (async/chan)
+      ; Either :idle or :busy
+      :computation-state :idle
+      ; Either :stopped or :running or :shutdown
+      :app-status :stopped})
+    (reset! pushgp-results-atom "")
+    ; (async/onto-chan fib-input (range num-items))
+    ))
+
+(defn stopped->running []
+  (swap! system-state assoc :app-status :running)
+  (when (= :idle (:computation-state @system-state))
+    (swap! system-state assoc :computation-state :busy)
+    ;(go
+    ;  (async/>! (:fib-control @system-state) :run-next))
+      ))
+
+(defn running->stopped []
+  (swap! system-state assoc :app-status :stopped))
+
+(defn handle-play-pause [event]
+  (case (:app-status @system-state)
+    :stopped (stopped->running)
+    :running (running->stopped)))
+
+(defn pushgp-results-component []
+  [:div {:style {:height "200px" :max-height "200px" :overflow "auto"}
+         :id "pushgp-results"}
+    [:p @pushgp-results-atom]])
+
+(defn play-pause-button [app-status]
+  [:button {:on-click handle-play-pause}
+    (if (= app-status :running)
+      [:i {:class "fa fa-pause-circle" :style {:color "red" :font-size "200%"}}]
+      [:i {:class "fa fa-play-circle" :style {:color "green" :font-size "200%"}}])])
+
+(defn pushgp-output-component []
+  [:div
+    ; It's useful to put the button _above_ the output, otherwise it keeps
+    ; getting pushed down the page and you end up having to chase it it you
+    ; want to stop the thing.
+    (when-not (= :shutdown (:app-status @system-state))
+      [play-pause-button (:app-status @system-state)])
+    (when (not-empty @system-state)
+      [:button
+        {:on-click reset-system :style {:color "red" :font-size "150%"}}
+        "Reset"])
+    [pushgp-results-component]])
+
+[pushgp-output-component]
 ```
 
 ```
