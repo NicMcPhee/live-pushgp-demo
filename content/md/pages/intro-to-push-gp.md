@@ -586,6 +586,25 @@ These are "standard" Clojure atoms used to persist state across a run.
 (def counter-atom (atom 0)) ;; to manage generation limits on runs
 
 (def pushgp-results-atom (r/atom "<results will appear here>"))
+
+; The overall state of the system
+(def system-state (r/atom {}))
+
+(defn initialize-state []
+  (let [control-channel (async/chan)
+        results-channel (async/chan)]
+    (reset! system-state {
+      :control-channel control-channel
+      :results-channel results-channel
+      ; Either :idle or :busy
+      :computation-state :idle
+      ; Either :stopped or :running or :shutdown
+      :app-status :stopped})
+    (reset! pushgp-results-atom "")
+    (reset! population-atom [])
+    (reset! counter-atom 0)))
+
+@system-state
 ```
 
 ### Reporting
@@ -611,15 +630,11 @@ These are "standard" Clojure atoms used to persist state across a run.
             "Behavior of best:\n"
             (behavior-map (:training-function @args-atom) best)
             "\n")]
-      (swap! pushgp-results-atom str generation-report))
-  (go
-    ; We need this timeout so the computational side of the
-    ; system will sleep for a little, giving the UI side a
-    ; little access to the CPU to process user input.
-    (async/<! (async/timeout 100))))
+      (swap! pushgp-results-atom str generation-report)))
 
 (defn report-starting-line
-  [args] (println "Starting GP with args:" args))
+  [args]
+  (swap! pushgp-results-atom str "Starting GP with args:\n" args "\n"))
 ```
 
 ### Evolutionary search
@@ -649,29 +664,45 @@ These are "standard" Clojure atoms used to persist state across a run.
       #(new-individual evaluated-pop argmap)
       )))
 
-(defn propel-gp!
-  "Main GP loop, rewritten to use a population atom and a dotimes."
-  [pop-atom arg-atom pause-atom counter-atom]
+(defn compute-errors
+  [pop-atom arg-atom]
+  ; In a more parallel universe this could be susceptible to a race condition
+  ; because we check @pop-atom and then use it later, implicitly assuming it
+  ; hasn't changed. In this setting it won't, but in a more parallel setting
+  ; it could.
+  (if (:errors (first @pop-atom))
+     @pop-atom
+     (score-sorted-population @pop-atom (:error-function @arg-atom) @arg-atom)))
+
+(defn run-generation
+  [pop-atom arg-atom counter-atom]
   (let [pop-size (:population-size @arg-atom)
-        instructions (:instructions @arg-atom)
-        max-plushy (:max-initial-plushy-size @arg-atom)
-        max-gens (:max-generations @arg-atom)
-        error-fxn (:error-function @arg-atom)]
-    (report-starting-line @arg-atom)
-    (propel-setup! pop-atom
-                   pop-size
-                   instructions
-                   max-plushy)
-    (while (and (not @pause-atom) (< @counter-atom max-gens))
-      (let [evaluated-pop
-             (if (:errors (first @pop-atom))
-                @pop-atom
-                (score-sorted-population @pop-atom error-fxn @arg-atom))]
-        (report-generation evaluated-pop @counter-atom)
-        (swap! counter-atom inc)
-        (reset! pop-atom
-          (repeatedly pop-size
-                      #(new-individual evaluated-pop @arg-atom)))))))
+        evaluated-pop (compute-errors pop-atom arg-atom)]
+    (report-generation evaluated-pop @counter-atom)
+    (swap! counter-atom inc)
+    (reset! pop-atom
+      (repeatedly pop-size
+                  #(new-individual evaluated-pop @arg-atom)))))
+
+(defn propel-gp!
+  "Main GP loop, rewritten to use a population atom."
+  [pop-atom arg-atom pause-atom counter-atom]
+  (report-starting-line @arg-atom)
+  (propel-setup! pop-atom
+                 (:population-size @arg-atom)
+                 (:instructions @arg-atom)
+                 (:max-initial-plushy-size @arg-atom))
+  (go-loop []
+    (if-let [continue-token (async/<! (:control-channel @system-state))]
+      (do
+        (run-generation pop-atom arg-atom counter-atom)
+        (async/>! (:results-channel @system-state) {:generation @counter-atom})
+        (async/<! (async/timeout 10))
+        (recur))
+      ; If the result is nil then control channel has
+      ; been shutdown, which means we should say the app has stopped
+      ; and stop this loop.
+      (swap! system-state assoc :app-status :stopped))))
 
 (defn run-once
   "Run the program with the given initial state, until the step limit is reached."
@@ -928,9 +959,12 @@ We almost certainly want to hide this.
     (reset! arg-atom (update-derived-args merged))))
 ```
 
+### Set-up and run Propel
+
 ```klipse-cljs
 (defn setup-and-run-propel!
   [& args]
+  (initialize-state)
   (collect-the-args! args-atom
     :cli-hash (parse-cli-args args))
   (println @args-atom)
@@ -939,7 +973,30 @@ We almost certainly want to hide this.
               pause-atom
               counter-atom))
 
-(setup-and-run-propel! ":population-size" "10" ":max-generations" "20")
+(setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
+```
+
+### Start the control loop
+
+```klipse-cljs
+(defn process-result [generation]
+  (if (= :running (:app-status @system-state))
+    (go
+      ; We need this timeout so the computational side of the
+      ; system will sleep for a little, giving the UI side a
+      ; little access to the CPU to process user input.
+      ; (async/<! (async/timeout 10))
+      (async/>! (:control-channel @system-state) :run-next))
+    (swap! system-state assoc :computation-state :idle)))
+
+(defn control-loop
+  []
+  (go-loop []
+    (when-let [{generation :generation} (async/<! (:results-channel @system-state))]
+      (process-result generation)
+      (recur))))
+
+(control-loop)
 ```
 
 ```klipse-reagent
@@ -1003,36 +1060,12 @@ We almost certainly want to hide this.
 ```
 
 ```klipse-reagent
-(def system-state (r/atom {}))
-
-(defn initialize-state []
-  (let [
-        ;fib-input (async/chan)
-        ;fib-control (async/chan)
-        ;fib-output (async/map
-        ;              (fn [n] {:input n, :result (fib n)})
-        ;              [(controllable-channel fib-control fib-input)])
-                      ]
-    (reset! system-state {
-      ;:fib-input fib-input
-      ;:fib-control fib-control
-      ;:fib-output fib-output
-      :events (async/chan)
-      ; Either :idle or :busy
-      :computation-state :idle
-      ; Either :stopped or :running or :shutdown
-      :app-status :stopped})
-    (reset! pushgp-results-atom "")
-    ; (async/onto-chan fib-input (range num-items))
-    ))
-
 (defn stopped->running []
   (swap! system-state assoc :app-status :running)
   (when (= :idle (:computation-state @system-state))
     (swap! system-state assoc :computation-state :busy)
-    ;(go
-    ;  (async/>! (:fib-control @system-state) :run-next))
-      ))
+    (go
+      (async/>! (:control-channel @system-state) :run-next))))
 
 (defn running->stopped []
   (swap! system-state assoc :app-status :stopped))
@@ -1041,6 +1074,13 @@ We almost certainly want to hide this.
   (case (:app-status @system-state)
     :stopped (stopped->running)
     :running (running->stopped)))
+
+(defn reset-system [event]
+  (async/close! (:control-channel @system-state))
+  (async/close! (:results-channel @system-state))
+  (initialize-state)
+  (setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
+  (control-loop))
 
 (defn pushgp-results-component []
   [:div {:style {:height "200px" :max-height "200px" :overflow "auto"}
@@ -1067,6 +1107,16 @@ We almost certainly want to hide this.
     [pushgp-results-component]])
 
 [pushgp-output-component]
+```
+
+```klipse-reagent
+(defn system-state-component []
+  [:div
+    [:h2 "System state"]
+    [:p "Computation state: " (:computation-state @system-state)]
+    [:p "App status: " (:app-status @system-state)]])
+
+[system-state-component]
 ```
 
 ```
