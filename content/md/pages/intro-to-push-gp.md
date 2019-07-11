@@ -160,6 +160,16 @@
 #### Integer instructions
 
 ```klipse-cljs
+(defn integer_inc
+  [state]
+  (single-result-push-instruction
+    state inc [:integer] :integer))
+
+(defn integer_dec
+  [state]
+  (single-result-push-instruction
+    state dec [:integer] :integer))
+
 (defn integer_+
   [state]
   (single-result-push-instruction
@@ -314,6 +324,8 @@
 
 (def push-instruction-registry
   {'in1 in1
+   'integer_inc integer_inc
+   'integer_dec integer_dec
    'integer_+ integer_+
    'integer_- integer_-
    'integer_* integer_*
