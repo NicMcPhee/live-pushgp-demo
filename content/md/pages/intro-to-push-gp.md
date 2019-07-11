@@ -62,9 +62,6 @@
 ### Stack manipulation
 
 ```klipse-cljs
-;;;;;;;;;;;;;;;;;;;;;
-;; Stack manipulation
-
 (defn push-to-stack
   "Pushes item onto stack in state"
   [state stack item]
@@ -144,9 +141,6 @@
 #### Instructions
 
 ```klipse-cljs
-;;;;;;;;;;;;;;;
-;; Instructions
-
 (def opens ; number of blocks opened by instructions (default = 0)
   {'exec_dup 1
    'exec_if 2})
@@ -376,9 +370,6 @@
 ## Push interpreter
 
 ```klipse-cljs
-;;;;;;;;;;;;;;
-;; Interpreter
-
 (defn cljc-throw
   [item]
   (throw
@@ -451,9 +442,6 @@
 ### Parent selection
 
 ```klipse-cljs
-;;;;;;;;;
-;; GP
-
 (defn tournament-selection
   "Selects an individual from the population using a tournament."
   [pop argmap]
@@ -603,8 +591,6 @@ These are "standard" Clojure atoms used to persist state across a run.
 ### Reporting
 
 ```klipse-cljs
-;;;;;;;;;;;;;;;;;; reporting
-
 (defn behavior-map
   [problem individual]
   (into (sorted-map) (zipmap (:args problem) (:behaviors individual))))
@@ -896,8 +882,6 @@ This is a group of utility functions to help manage arguments to the run.
 We almost certainly want to hide this.
 
 ```klipse-cljs
-;;;;;;;;;;;;;;;;;;
-
 (def default-args
   "Default argument hash, which is modified by a hash and CLI args."
    {:instructions default-instructions
