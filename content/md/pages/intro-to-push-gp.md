@@ -17,30 +17,6 @@
     [cljs.core.async :as async]
     [reagent.core :as r]))
 
-;; CLI defaults:
-;; - :instructions default-instructions
-;;   - [specified collection of symbols]
-;; - :target-problem :simple-cubic
-;;   - :simple-quadratic
-;;   - :birthday-quadratic
-;;   - :random-integer-data
-;;   - :contains-T?
-;;   - :contains-TA-or-AT?
-;; :population-size 200
-;; :max-generations 100
-;; :max-initial-plushy-size 50
-;; :step-limit 100
-;; :parent-selection :tournament
-;;   - :lexicase
-;; :misbehavior-penalty +1e12
-;; :tournament-size 5
-
-; Instructions must all be either functions that take one Push state and
-; return another or constant literals.
-
-;;;;;;;;;;;;
-;; Utilities
-
 (def empty-push-state
   {:exec '()
    :integer '()
@@ -912,6 +888,26 @@ This is a group of utility functions to help manage arguments to the run.
 
 We almost certainly want to hide this.
 
+```
+;; CLI defaults:
+;; - :instructions default-instructions
+;;   - [specified collection of symbols]
+;; - :target-problem :simple-cubic
+;;   - :simple-quadratic
+;;   - :birthday-quadratic
+;;   - :random-integer-data
+;;   - :contains-T?
+;;   - :contains-TA-or-AT?
+;; :population-size 200
+;; :max-generations 100
+;; :max-initial-plushy-size 50
+;; :step-limit 100
+;; :parent-selection :tournament
+;;   - :lexicase
+;; :misbehavior-penalty +1e12
+;; :tournament-size 5
+```
+
 ```klipse-cljs
 (def default-args
   "Default argument hash, which is modified by a hash and CLI args."
@@ -1107,45 +1103,4 @@ We almost certainly want to hide this.
     [pushgp-results-component]])
 
 [pushgp-output-component]
-```
-
-```klipse-reagent
-(defn system-state-component []
-  [:div
-    [:h2 "System state"]
-    [:p "Computation state: " (:computation-state @system-state)]
-    [:p "App status: " (:app-status @system-state)]])
-
-[system-state-component]
-```
-
-```
-;;;;;;;;;;;;;;
-
-(defn repl-main
-  "Provided as a simple hands-on check for somebody working in a cljs REPL.
-   Accepts no arguments! Just to see that things are \"working\"..."
-  []
-  (collect-the-args! args-atom :override-hash {:max-generations 30})
-  (propel-gp! population-atom
-              args-atom
-              pause-atom
-              counter-atom)
-  )
-
-#?(:clj
-    (defn -main
-      "Runs propel-gp! from command line, giving it a map of arguments.
-       Use function calls to 'propel-setup! and 'propel-population-step to
-       walk through search using an external caller."
-      [& cli-args]
-      (binding [*ns* (the-ns 'propel.core)]
-        (collect-the-args! args-atom
-          :cli-hash (parse-cli-args cli-args))
-        (println @args-atom)
-        (propel-gp! population-atom
-                    args-atom
-                    pause-atom
-                    counter-atom)
-        )))
 ```
