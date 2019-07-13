@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="//fonts.googleapis.com/css?family=Alegreya:400italic,700italic,400,700" rel="stylesheet"
           type="text/css">
-    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/styles/default.min.css">
     <link href="/css/screen.css" rel="stylesheet" type="text/css" />
@@ -73,8 +73,7 @@
 
 ; TODO add collapsable components so users can open/close sections
 ; as they are/aren't interested.
-
-(defn abs
+</code></pre><pre><code class="klipse-cljs nohighlight">(defn abs
   "Absolute value."
   [x]
   (if (neg? x)
@@ -535,11 +534,13 @@
     (map (partial error-fxn args) population)
     ))
 </code></pre><h3 id="persistence">Persistence</h3><p>These are "standard" Clojure atoms used to persist state across a run.</p><pre><code class="klipse-cljs nohighlight">(def population-atom (atom [])) ;; stores population between steps
+(def current-total-error (atom nil)) ;; stores best total error from last gen
 (def args-atom (atom {})) ;; stores arg hash
 (def pause-atom (atom false)) ;; intended to be overridden externally
 (def counter-atom (atom 0)) ;; to manage generation limits on runs
 
 (def pushgp-results-atom (r/atom "&lt;results will appear here&gt;"))
+(def pushgp-current-gen-atom (r/atom "&lt;results will appear here&gt;"))
 
 ; The overall state of the system
 (def system-state (r/atom {}))
@@ -555,7 +556,9 @@
       ; Either :stopped or :running or :shutdown
       :app-status :stopped})
     (reset! pushgp-results-atom "")
+    (reset! pushgp-current-gen-atom "")
     (reset! population-atom [])
+    (reset! current-total-error nil)
     (reset! counter-atom 0)))
 
 @system-state
@@ -579,7 +582,9 @@
             "Behavior of best:\n"
             (behavior-map (:training-function @args-atom) best)
             "\n")]
-      (swap! pushgp-results-atom str generation-report)))
+      (swap! pushgp-results-atom str generation-report)
+      (reset! pushgp-current-gen-atom generation-report)
+      (reset! current-total-error (:total-error best))))
 
 (defn report-starting-line
   [args]
@@ -902,7 +907,7 @@
       ; We need this timeout so the computational side of the
       ; system will sleep for a little, giving the UI side a
       ; little access to the CPU to process user input.
-      ; (async/&lt;! (async/timeout 10))
+      (async/&lt;! (async/timeout 10))
       (async/&gt;! (:control-channel @system-state) :run-next))
     (swap! system-state assoc :computation-state :idle)))
 
@@ -910,8 +915,12 @@
   []
   (go-loop []
     (when-let [{generation :generation} (async/&lt;! (:results-channel @system-state))]
-      (process-result generation)
-      (recur))))
+      (if (zero? @current-total-error)
+        (do
+          (swap! system-state assoc :app-status :shutdown))
+        (do
+          (process-result generation)
+          (recur))))))
 
 (control-loop)
 </code></pre><pre><code class="klipse-reagent nohighlight">(def *default-population-size* 10)
@@ -990,9 +999,17 @@
   (setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
   (control-loop))
 
+(defn pushgp-current-gen-component []
+  [:div {:id "pushgp-current-gen"}
+    [:hr]
+    [:h2 "Current generation"]
+    [:p @pushgp-current-gen-atom]])
+
 (defn pushgp-results-component []
-  [:div {:style {:height "200px" :max-height "200px" :overflow "auto"}
+  [:div {:style {:height "400px" :max-height "400px" :overflow "auto"}
          :id "pushgp-results"}
+    [:hr]
+    [:h2 "All generations"]
     [:p @pushgp-results-atom]])
 
 (defn play-pause-button [app-status]
@@ -1012,6 +1029,7 @@
       [:button
         {:on-click reset-system :style {:color "red" :font-size "150%"}}
         "Reset"])
+    [pushgp-current-gen-component]
     [pushgp-results-component]])
 
 [pushgp-output-component]
@@ -1037,6 +1055,8 @@
                     <li><a href="/pages-output/another-page/">Another Page</a></li>
                     
                     <li><a href="/pages-output/simple-propel/">Interactive PushGP demo</a></li>
+                    
+                    <li><a href="/pages-output/push-interpreter/">Simple Push interpreter</a></li>
                     
                 </ul>
                 

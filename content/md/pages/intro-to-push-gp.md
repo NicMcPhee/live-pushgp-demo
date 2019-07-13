@@ -26,7 +26,9 @@
 
 ; TODO add collapsable components so users can open/close sections
 ; as they are/aren't interested.
+```
 
+```klipse-cljs
 (defn abs
   "Absolute value."
   [x]
@@ -557,11 +559,13 @@ These are "standard" Clojure atoms used to persist state across a run.
 
 ```klipse-cljs
 (def population-atom (atom [])) ;; stores population between steps
+(def current-total-error (atom nil)) ;; stores best total error from last gen
 (def args-atom (atom {})) ;; stores arg hash
 (def pause-atom (atom false)) ;; intended to be overridden externally
 (def counter-atom (atom 0)) ;; to manage generation limits on runs
 
 (def pushgp-results-atom (r/atom "<results will appear here>"))
+(def pushgp-current-gen-atom (r/atom "<results will appear here>"))
 
 ; The overall state of the system
 (def system-state (r/atom {}))
@@ -577,7 +581,9 @@ These are "standard" Clojure atoms used to persist state across a run.
       ; Either :stopped or :running or :shutdown
       :app-status :stopped})
     (reset! pushgp-results-atom "")
+    (reset! pushgp-current-gen-atom "")
     (reset! population-atom [])
+    (reset! current-total-error nil)
     (reset! counter-atom 0)))
 
 @system-state
@@ -606,7 +612,9 @@ These are "standard" Clojure atoms used to persist state across a run.
             "Behavior of best:\n"
             (behavior-map (:training-function @args-atom) best)
             "\n")]
-      (swap! pushgp-results-atom str generation-report)))
+      (swap! pushgp-results-atom str generation-report)
+      (reset! pushgp-current-gen-atom generation-report)
+      (reset! current-total-error (:total-error best))))
 
 (defn report-starting-line
   [args]
@@ -981,7 +989,7 @@ We almost certainly want to hide this.
       ; We need this timeout so the computational side of the
       ; system will sleep for a little, giving the UI side a
       ; little access to the CPU to process user input.
-      ; (async/<! (async/timeout 10))
+      (async/<! (async/timeout 10))
       (async/>! (:control-channel @system-state) :run-next))
     (swap! system-state assoc :computation-state :idle)))
 
@@ -989,8 +997,12 @@ We almost certainly want to hide this.
   []
   (go-loop []
     (when-let [{generation :generation} (async/<! (:results-channel @system-state))]
-      (process-result generation)
-      (recur))))
+      (if (zero? @current-total-error)
+        (do
+          (swap! system-state assoc :app-status :shutdown))
+        (do
+          (process-result generation)
+          (recur))))))
 
 (control-loop)
 ```
@@ -1078,9 +1090,17 @@ We almost certainly want to hide this.
   (setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
   (control-loop))
 
+(defn pushgp-current-gen-component []
+  [:div {:id "pushgp-current-gen"}
+    [:hr]
+    [:h2 "Current generation"]
+    [:p @pushgp-current-gen-atom]])
+
 (defn pushgp-results-component []
-  [:div {:style {:height "200px" :max-height "200px" :overflow "auto"}
+  [:div {:style {:height "400px" :max-height "400px" :overflow "auto"}
          :id "pushgp-results"}
+    [:hr]
+    [:h2 "All generations"]
     [:p @pushgp-results-atom]])
 
 (defn play-pause-button [app-status]
@@ -1100,6 +1120,7 @@ We almost certainly want to hide this.
       [:button
         {:on-click reset-system :style {:color "red" :font-size "150%"}}
         "Reset"])
+    [pushgp-current-gen-component]
     [pushgp-results-component]])
 
 [pushgp-output-component]
