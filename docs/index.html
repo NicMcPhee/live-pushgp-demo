@@ -32,11 +32,6 @@
                 <li
                 ><a href="/archives/">Archives</a></li>
                 
-                <li
-                >
-                <a href="/pages-output/about/">About</a>
-                </li>
-                
                 <li><a href="/feed.xml">RSS</a></li>
             </ul>
         </div><!--/.nav-collapse -->
@@ -56,7 +51,7 @@
         <h2>Simple Push interpreter</h2>
     </div>
     
-    <h2 id="setting_things_up">Setting things up</h2><p>This sets up the Clojure(Script) namespace and dependencies. It's all entirely Clojure specific, so feel free to ignore it.</p><pre><code class="klipse-cljs nohighlight">(ns propel.core
+    <p>Here we'll include the code for a simple Push interpreter (written in Clojure) that's completely live. You can edit the examples get instant feedback, and actually edit the interpreter if you're so inclined.</p><h2 id="setting_things_up">Setting things up</h2><p>This sets up the Clojure(Script) namespace and dependencies. It's all entirely Clojure specific, so feel free to ignore it.</p><pre><code class="klipse-cljs nohighlight">(ns propel.core
   (:require
     [clojure.string :as string]
     [reagent.core :as r]))
@@ -131,10 +126,18 @@
         (if (seq? result-seq)
           (update new-state return-stack into (reverse result-seq))
           (push-to-stack new-state return-stack result-seq))))))
-</code></pre><h2 id="instructions">Instructions</h2><h3 id="" reading95input95parameters="reading95input95parameters">"Reading" input parameters</h3><p>This instruction reads the value of the (single, for now) input argument (e.g., the input <i>x</i> for a symbolic regression problem) and pushes it onto the <code>:exec</code> stack. It will then get transferred to the stack of the appropriate type when "executed" as an "instruction".</p><pre><code class="klipse-cljs nohighlight">(defn in1
+</code></pre><h2 id="instructions">Instructions</h2><p>In this section we'll walk through constructing Push instructions that can be "understood" by the Push interpreter. To keep things simple we'll illustrate instructions that act on two different types, <code>integer</code> and <code>boolean</code>, alone with a small number of <code>exec</code> instructions. There are hundreds of other instructions on these and other types, but we don't to completely overwhelm you here.</p><h3 id="" reading95input95parameters="reading95input95parameters">"Reading" input parameters</h3><p>This instruction reads the value of the (single, for now) input argument (e.g., the input <i>x</i> for a symbolic regression problem) and pushes it onto the <code>:exec</code> stack. It will then get transferred to the stack of the appropriate type when "executed" as an "instruction".</p><pre><code class="klipse-cljs nohighlight">(defn in1
   "Pushes the input labeled :in1 from the inputs map onto the :exec stack."
   [state]
   (push-to-stack state :exec (:in1 (:input state))))
+</code></pre><p>Here's an example of this instruction in action. Feel free to edit the state and the input value to see how they change the outcome.</p><pre><code class="klipse-cljs nohighlight">(def sample-input-push-state
+  {:exec '()
+   :integer '(5 8 9)
+   :string '("GECCO" "PushGP")
+   :boolean '(false true)
+   :input {:in1 "I am an input!"}})
+
+(in1 sample-input-push-state)
 </code></pre><h3 id="integer_instructions">Integer instructions</h3><p>A bunch of integer instructions that support:</p><ul><li>Incrementing and decrementing<ul><li>Addition, subtraction, multiplication, and protected division<ul><li>We define protected division to return 1 if the denominator is 0.</li></ul></li><li>Equality, which takes two integers and pushes a <i>boolean</i> result.</li><li><code>Dup</code> and <code>Swap</code>, which manipulate the contents of the <code>:integer</code> stack.<ul><li><code>integer_dup</code> creates a second copy of whatever is on the top of the        <code>:integer</code> stack.</li><li><code>integer_swap</code> swaps the order of the top two elements of the        <code>:integer</code> stack.</li><li>These kind of stack manipulation instructions are repeated for the        other types (e.g., <code>:boolean</code> and <code>:string</code>) as well.</li></ul></li></ul></li></ul><p>Each of these calls <code>build-push-instruction</code> from above, providing the Push state being manipulated the Clojure function that will actually be called to evaluate this Push instruction, a vector of stacks that the arguments come from, and the stack the result is pushed onto. Many of these vary only in the Clojure function that should be called when this instruction is executed.</p><pre><code class="klipse-cljs nohighlight">(defn integer_inc
   [state]
   (build-push-instruction
@@ -347,10 +350,9 @@
             <div id="sidebar">
                 <h3>Links</h3>
                 <ul id="links">
-                    <li><a href="http://cryogenweb.org/docs/home.html">Cryogen Docs</a></li>
-                    <li><a href="http://carmenla.me/blog/archives">Carmen's Blog</a></li>
-                    
-                    <li><a href="/pages-output/intro-to-push-gp/">Interactive PushGP demo</a></li>
+                    <li><a href="https://nicmcphee.github.io/live-pushgp-demo/">Simple Push interpreter</a></li>
+                    <li><a href="https://faculty.hampshire.edu/lspector/push.html">Push home page</a></li>
+                    <li><a href="https://push-language.hampshire.edu/">The Push language Discourse site</a></li>
                     
                 </ul>
                 

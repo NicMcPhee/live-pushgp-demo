@@ -1,6 +1,6 @@
-(defproject cryogen "0.1.0"
-            :description "Simple static site generator"
-            :url "https://github.com/lacarmen/cryogen"
+(defproject push-live-demo "0.8.0"
+            :description "A live demo of Push and PushGP"
+            :url "https://github.com/NicMcPhee/live-pushgp-demo"
             :license {:name "Eclipse Public License"
                       :url "http://www.eclipse.org/legal/epl-v10.html"}
             :dependencies [[org.clojure/clojure "1.10.0"]

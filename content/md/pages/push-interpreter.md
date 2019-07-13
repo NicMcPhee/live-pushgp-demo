@@ -2,7 +2,12 @@
  :layout :page
  :page-index 1
  :home? true
+ :navbar? false
  :klipse true}
+
+Here we'll include the code for a simple Push interpreter (written in Clojure)
+that's completely live. You can edit the examples get instant feedback, and
+actually edit the interpreter if you're so inclined.
 
 ## Setting things up
 
@@ -130,6 +135,13 @@ in the construction of instructions below.
 
 ## Instructions
 
+In this section we'll walk through constructing Push instructions that can
+be "understood" by the Push interpreter. To keep things simple we'll
+illustrate instructions that act on two different types, `integer` and
+`boolean`, alone with a small number of `exec` instructions. There are
+hundreds of other instructions on these and other types, but we don't to
+completely overwhelm you here.
+
 ### "Reading" input parameters
 
 This instruction reads the value of the (single, for now) input argument
@@ -142,6 +154,20 @@ type when "executed" as an "instruction".
   "Pushes the input labeled :in1 from the inputs map onto the :exec stack."
   [state]
   (push-to-stack state :exec (:in1 (:input state))))
+```
+
+Here's an example of this instruction in action. Feel free to edit the state
+and the input value to see how they change the outcome.
+
+```klipse-cljs
+(def sample-input-push-state
+  {:exec '()
+   :integer '(5 8 9)
+   :string '("GECCO" "PushGP")
+   :boolean '(false true)
+   :input {:in1 "I am an input!"}})
+
+(in1 sample-input-push-state)
 ```
 
 ### Integer instructions

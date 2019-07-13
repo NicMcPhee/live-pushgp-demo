@@ -59,9 +59,10 @@
             <div id="sidebar">
                 <h3>Links</h3>
                 <ul id="links">
-                    <li><a href="http://cryogenweb.org/docs/home.html">Cryogen Docs</a></li>
-                    <li><a href="http://carmenla.me/blog/archives">Carmen's Blog</a></li>
-                    {% for page in sidebar-pages %}
+                    <li><a href="https://nicmcphee.github.io/live-pushgp-demo/">Simple Push interpreter</a></li>
+                    <li><a href="https://faculty.hampshire.edu/lspector/push.html">Push home page</a></li>
+                    <li><a href="https://push-language.hampshire.edu/">The Push language Discourse site</a></li>
+                    {% for page in pages %}
                     <li><a href="{{page.uri}}">{{page.title}}</a></li>
                     {% endfor %}
                 </ul>
