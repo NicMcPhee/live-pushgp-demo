@@ -9,7 +9,7 @@
  :tag-root-uri         "tags-output"
  :author-root-uri      "authors-output"
  :public-dest          "docs"
- :blog-prefix          "/"
+ :blog-prefix          ""
  :rss-name             "feed.xml"
  :rss-filters          ["cryogen"]
  :recent-posts         3

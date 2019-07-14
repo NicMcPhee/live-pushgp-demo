@@ -918,61 +918,7 @@
           (recur))))))
 
 (control-loop)
-</code></pre><h3 id="build_the_ui">Build the UI</h3><pre><code class="klipse-reagent nohighlight">(def *default-population-size* 10)
-(def pop-size-atom (r/atom *default-population-size*))
-(def *default-num-generations* 20)
-(def num-generations-atom (r/atom *default-num-generations*))
-
-(defn process-integer-field-change [event default-value]
-  (let [field-contents (-&gt; event .-target .-value)
-        field-value (js/parseInt field-contents)]
-    (if (or (js/isNaN field-value) (&lt;= field-value 0))
-      default-value
-      field-value)))
-
-(defn integer-input-field [integer-atom default-value]
-  [:div
-    [:input {:type "text"
-             :value @integer-atom
-             :on-change #(reset!
-                            integer-atom
-                            (process-integer-field-change % default-value))}]])
-
-(defn integer-parameter-component [parameter-name parameter-atom]
-  [:div
-    [:p "The current value of " parameter-name " is " @parameter-atom]
-    [:p "Change " parameter-name " here: "
-      [integer-input-field parameter-atom *default-population-size*]]])
-
-[:div
-  [integer-parameter-component "Population size" pop-size-atom]
-  [integer-parameter-component "Number of generations" num-generations-atom]]
-</code></pre><pre><code class="klipse-reagent nohighlight">(def parent-selection-atom (r/atom :tournament))
-
-(defn dropdown-selection [selection-atom options]
-  [:div
-    [:select
-      {:field :list
-       :value @selection-atom
-       :on-change #(reset! selection-atom (-&gt; % .-target .-value))}
-      (for [opt options]
-        [:option {:key opt} opt])]])
-
-(defn option-component [parameter-atom parameter-name options]
-  [:div
-    [:label parameter-name]
-    [dropdown-selection parameter-atom options]])
-
-(defn parent-selection-choice []
-  [:div
-    [:p "Current selection mechanism is " @parent-selection-atom]
-    [option-component
-      parent-selection-atom
-      "Parent selection mechanism"
-      [:random :tournament :lexicase]]])
-
-[parent-selection-choice]
-</code></pre><pre><code class="klipse-reagent nohighlight">(defn stopped-&gt;running []
+</code></pre><h3 id="build_the_ui">Build the UI</h3><pre><code class="klipse-reagent nohighlight">(defn stopped-&gt;running []
   (swap! system-state assoc :app-status :running)
   (when (= :idle (:computation-state @system-state))
     (swap! system-state assoc :computation-state :busy)
