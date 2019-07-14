@@ -832,28 +832,14 @@
 ;;   - :random-integer-data
 ;;   - :contains-T?
 ;;   - :contains-TA-or-AT?
-;; :population-size 200
-;; :max-generations 100
+;; :population-size 100
 ;; :max-initial-plushy-size 50
 ;; :step-limit 100
 ;; :parent-selection :tournament
 ;;   - :lexicase
 ;; :misbehavior-penalty +1e12
 ;; :tournament-size 5
-</code></pre><pre><code class="klipse-cljs nohighlight">(def default-args
-  "Default argument hash, which is modified by a hash and CLI args."
-   {:instructions default-instructions
-    :target-problem :simple-cubic
-    :population-size 200
-    :max-initial-plushy-size 50
-    :step-limit 100
-    :parent-selection :tournament
-    :misbehavior-penalty +1e12
-    :tournament-size 5
-    :max-generations 100
-    })
-
-(defn cljc-read-string
+</code></pre><pre><code class="klipse-cljs nohighlight">(defn cljc-read-string
   [string]
   (cljs.reader/read-string string))
 
@@ -871,6 +857,18 @@
       (assoc , :training-function demo)
       (assoc , :error-function (:error-function demo))
       )))
+
+(def default-args
+  "Default argument hash, which is modified by a hash and CLI args."
+   {:instructions default-instructions
+    :target-problem :simple-cubic
+    :population-size 100
+    :max-initial-plushy-size 50
+    :step-limit 100
+    :parent-selection :tournament
+    :misbehavior-penalty +1e12
+    :tournament-size 5
+    })
 
 (defn collect-the-args!
   "Omnibus function to merge all the arguments in play, and store them
@@ -895,7 +893,7 @@
               pause-atom
               counter-atom))
 
-(setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
+(setup-and-run-propel!)
 </code></pre><h3 id="start_the_control_loop">Start the control loop</h3><pre><code class="klipse-cljs nohighlight">(defn process-result [generation]
   (if (= :running (:app-status @system-state))
     (go
@@ -937,7 +935,7 @@
   (async/close! (:control-channel @system-state))
   (async/close! (:results-channel @system-state))
   (initialize-state)
-  (setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
+  (setup-and-run-propel!)
   (control-loop))
 
 (defn pushgp-current-gen-component []

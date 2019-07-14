@@ -906,8 +906,7 @@ We almost certainly want to hide this.
 ;;   - :random-integer-data
 ;;   - :contains-T?
 ;;   - :contains-TA-or-AT?
-;; :population-size 200
-;; :max-generations 100
+;; :population-size 100
 ;; :max-initial-plushy-size 50
 ;; :step-limit 100
 ;; :parent-selection :tournament
@@ -917,19 +916,6 @@ We almost certainly want to hide this.
 ```
 
 ```klipse-cljs
-(def default-args
-  "Default argument hash, which is modified by a hash and CLI args."
-   {:instructions default-instructions
-    :target-problem :simple-cubic
-    :population-size 200
-    :max-initial-plushy-size 50
-    :step-limit 100
-    :parent-selection :tournament
-    :misbehavior-penalty +1e12
-    :tournament-size 5
-    :max-generations 100
-    })
-
 (defn cljc-read-string
   [string]
   (cljs.reader/read-string string))
@@ -948,6 +934,18 @@ We almost certainly want to hide this.
       (assoc , :training-function demo)
       (assoc , :error-function (:error-function demo))
       )))
+
+(def default-args
+  "Default argument hash, which is modified by a hash and CLI args."
+   {:instructions default-instructions
+    :target-problem :simple-cubic
+    :population-size 100
+    :max-initial-plushy-size 50
+    :step-limit 100
+    :parent-selection :tournament
+    :misbehavior-penalty +1e12
+    :tournament-size 5
+    })
 
 (defn collect-the-args!
   "Omnibus function to merge all the arguments in play, and store them
@@ -977,7 +975,7 @@ We almost certainly want to hide this.
               pause-atom
               counter-atom))
 
-(setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
+(setup-and-run-propel!)
 ```
 
 ### Start the control loop
@@ -1029,7 +1027,7 @@ We almost certainly want to hide this.
   (async/close! (:control-channel @system-state))
   (async/close! (:results-channel @system-state))
   (initialize-state)
-  (setup-and-run-propel! ":population-size" "100" ":max-generations" "20")
+  (setup-and-run-propel!)
   (control-loop))
 
 (defn pushgp-current-gen-component []
