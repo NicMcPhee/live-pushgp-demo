@@ -6,6 +6,8 @@
 
 ## An interactive PushGP demo
 
+<center><i>Scroll all the way to the bottom and press "Play"!</i></center>
+
 ### Setup and utilities
 
 ```klipse-cljs
@@ -1006,6 +1008,14 @@ We almost certainly want to hide this.
 ```
 
 ### Build the UI
+
+Press "Play" to start/continue a run and "Pause" to pause a currently
+running run. "Reset" resets the entire system for a new run; you have
+to press "Reset" if you change any of the default arguments.
+
+Feel free to edit `default-args` (a few function definitions above)
+to alter things like the target problem or the population size. A
+list of possible arguments and values is at the top of that section.
 
 ```klipse-reagent
 (defn stopped->running []

@@ -53,7 +53,7 @@
         <h2>Interactive PushGP demo</h2>
     </div>
     
-    <h2 id="an_interactive_pushgp_demo">An interactive PushGP demo</h2><h3 id="setup_and_utilities">Setup and utilities</h3><pre><code class="klipse-cljs nohighlight">(ns propel.core
+    <h2 id="an_interactive_pushgp_demo">An interactive PushGP demo</h2><p></p><center><i>Scroll all the way to the bottom and press "Play"!</i></center><h3 id="setup_and_utilities">Setup and utilities</h3><pre><code class="klipse-cljs nohighlight">(ns propel.core
   (:require-macros
     [cljs.core.async.macros :refer [go go-loop]])
   (:require
@@ -918,7 +918,7 @@
           (recur))))))
 
 (control-loop)
-</code></pre><h3 id="build_the_ui">Build the UI</h3><pre><code class="klipse-reagent nohighlight">(defn stopped-&gt;running []
+</code></pre><h3 id="build_the_ui">Build the UI</h3><p>Press "Play" to start/continue a run and "Pause" to pause a currently running run. "Reset" resets the entire system for a new run; you have to press "Reset" if you change any of the default arguments.</p><p>Feel free to edit <code>default-args</code> (a few function definitions above) to alter things like the target problem or the population size. A list of possible arguments and values is at the top of that section.</p><pre><code class="klipse-reagent nohighlight">(defn stopped-&gt;running []
   (swap! system-state assoc :app-status :running)
   (when (= :idle (:computation-state @system-state))
     (swap! system-state assoc :computation-state :busy)
